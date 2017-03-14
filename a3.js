@@ -27,7 +27,7 @@ var drawMap = function(mapData, data, key, htmlID) {
 
 	var width = 1000,
 	    height = 500,
-	    scale = 160;
+	    scale = 175;
 
 	/* draw svg and g elements */
 	var svg = d3.select(htmlID)
@@ -38,7 +38,7 @@ var drawMap = function(mapData, data, key, htmlID) {
 	var color = d3.scaleSequential(d3.interpolateReds);
 
 	/* map projection */
-	var projection = d3.geoRobinson()
+	var projection = d3.geoNaturalEarth()
 					.scale(scale);
 
 	var path = d3.geoPath()
@@ -47,6 +47,15 @@ var drawMap = function(mapData, data, key, htmlID) {
 	var playersCount = _.countBy(data, key);
 
 	var maxCount = Math.max.apply(null, Object.keys(playersCount).map(function(key) { return playersCount[key]; }));
+
+	svg.append("defs").append("path")
+				    .datum({type: "Sphere"})
+				    .attr("id", "sphere")
+				    .attr("d", path);
+
+	svg.append("use")
+	    .attr("class", "bound")
+	    .attr("xlink:href", "#sphere");
 
 	/* append to svg */
 	svg.append("g")
