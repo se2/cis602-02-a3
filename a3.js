@@ -103,9 +103,9 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	    height = 800,
 	    nodes, links, nationalities;
 
-	var svg = d3.select("body").append("svg")
-	    .attr("width", width)
-	    .attr("height", height);
+	var svg = d3.select("#teammates").append("svg")
+			    .attr("width", width)
+			    .attr("height", height);
 
 	var color = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -116,27 +116,24 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 					.force("link", d3.forceLink().id(function(d) { return d.id; }))
 	    			.force("center", d3.forceCenter(width / 2, height / 2));
 
-	simulation.force("many").strength(-200);
-	simulation.force("link").distance(50);
+	simulation.force("many").strength(-400);
 
-	simulation
-	    .nodes(teammateData.nodes);
+	simulation.nodes(teammateData.nodes);
 
-	simulation
-	    .force("link")
-	    .links(teammateData.links);
+	simulation.force("link")
+	    	.links(teammateData.links);
 
 	link = svg.selectAll(".link")
-	    .data(teammateData.links)
-	    .enter().append("line")
-	    .attr("class", "link")
-        .attr("stroke", "#7BA1C2")
-				.attr("stroke-width", 1);;
+		    .data(teammateData.links)
+		    .enter().append("line")
+		    .attr("class", "link")
+	        .attr("stroke", "#7BA1C2")
+					.attr("stroke-width", 1);;
 
 	node = svg.selectAll(".node")
-	    .data(teammateData.nodes)
-	    .enter().append("g")
-	    .attr("class", "node");
+		    .data(teammateData.nodes)
+		    .enter().append("g")
+		    .attr("class", "node");
 
     node.append("circle")
 		.attr("r", 10)
@@ -149,7 +146,7 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 
 	node.append("text")
 	    .attr("dx", 12)
-	    .attr("font-size", 10)
+	    .attr("font-size", 11)
 	    .attr("dy", ".35em")
 	    .text(function(d) {
 	        return d.id });
@@ -180,7 +177,7 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	    d.fy = null;
 	}
 
-	/* legend of colors - nationalities */
+	/* legend */
 	drawLegend(svg, nationalities, color);
 }
 
@@ -193,6 +190,7 @@ function createVis(errors, mapData, womensData, mensData, teammateData) {
     drawMap(mapData, mensData, "Nationality", "#map-men");
 
     forceSimulation(teammateData, mensData, "#teammates");
+
 }
 
 d3.queue().defer(d3.json, "https://cdn.rawgit.com/johan/world.geo.json/master/countries.geo.json")
