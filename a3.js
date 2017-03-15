@@ -63,14 +63,14 @@ var drawMap = function(mapData, data, key, htmlID) {
 	    .data(mapData.features)
 	    .enter().append("path")
 		    .attr("fill", function(d) {
-		        return (playersCount[d.properties.name] == undefined) ? "#fff" : color(playersCount[d.properties.name] / maxCount); })
+		        return (_.isNil(playersCount[d.properties.name])) ? "#fff" : color(playersCount[d.properties.name] / maxCount); })
 		    .attr("d", path)
 		    .attr("stroke", "#000")
 			.attr("stroke-width", 0.5)
 		    .attr("class", function(d) { return d.id })
 		    .append("title")
 		    	.text(function(d) {
-		        	return (playersCount[d.properties.name] == undefined) ? "" : d.properties.name + ": " + playersCount[d.properties.name];
+		        	return (_.isNil(playersCount[d.properties.name])) ? "" : d.properties.name + ": " + playersCount[d.properties.name];
 		    	});
 }
 
@@ -82,21 +82,19 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 
 	/* return top 9 nationalities with most players */
 	nationalities = _.map(_.countBy(mensData, "Nationality"), function(value, key) { return { key: key, value: value }; });
-	nationalities = _.map(_.chunk(_.reverse(_.sortBy(nationalities, "value")), 9)[0], "key");
+	nationalities = _.map(_.chunk(_.orderBy(nationalities, ['value'], ['desc']), 9)[0], 'key');
 	nationalities.push("Other");
 
-	teammateData.map(function(d) {
+	teammateData.map(function(names) {
 
-		nationality1 = (_.filter(mensData, function(o) { return d[0] == o.Name; })[0]["Nationality"]);
-		nationality2 = (_.filter(mensData, function(o) { return d[1] == o.Name; })[0]["Nationality"]);
+		names.map(function(name, i) {
+			nationality = (_.filter(mensData, function(o) { return name == o.Name; })[0]["Nationality"]);
+			node = { "id": name, "nationality": (_.includes(nationalities, nationality)) ? nationality : "Other" }
+			nodes.push(node);
+		});
 
-		node1 = { "id": d[0], "nationality": (_.includes(nationalities, nationality1)) ? nationality1 : "Other" }
-		node2 = { "id": d[1], "nationality": (_.includes(nationalities, nationality2)) ? nationality2 : "Other" }
-		link  = { "source": d[0], "target": d[1] };
-
+		link  = { "source": names[0], "target": names[1] };
 		links.push(link);
-		nodes.push(node1);
-		nodes.push(node2);
 
 	});
 
@@ -107,9 +105,11 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 		"links": links
 	}
 
+    var container = document.getElementById("teammates");
+
 	/* draw simulation */
-	var width = 1100,
-	    height = 800,
+	var width = container.clientWidth,
+	    height = container.clientHeight,
 	    nodes, links, nationalities;
 
 	var svg = d3.select("#teammates").append("svg")
@@ -119,13 +119,11 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	var color = d3.scaleOrdinal(d3.schemeCategory10);
 
 	var simulation = d3.forceSimulation()
-					.force("x", d3.forceX(200))
-					.force("y", d3.forceY(200))
 					.force("many", d3.forceManyBody())
 					.force("link", d3.forceLink().id(function(d) { return d.id; }))
 	    			.force("center", d3.forceCenter(width / 2, height / 2));
 
-	simulation.force("many").strength(-400);
+	simulation.force("many").strength(-225);
 
 	simulation.nodes(teammateData.nodes);
 
@@ -135,30 +133,30 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	link = svg.selectAll(".link")
 		    .data(teammateData.links)
 		    .enter().append("line")
-		    .attr("class", "link")
 	        .attr("stroke", "#7BA1C2")
-					.attr("stroke-width", 1);;
+			.attr("stroke-width", 0.75);
 
-	node = svg.selectAll(".node")
+	node = svg.selectAll("g")
 		    .data(teammateData.nodes)
 		    .enter().append("g")
-		    .attr("class", "node");
 
     node.append("circle")
 		.attr("r", 10)
 		.attr("fill", function(d) {
 			return color(d.nationality); })
 		.call(d3.drag()
-			.on("start", dragstarted)
-			.on("drag", dragged)
-			.on("end", dragended));
+			.on("start", dragstart)
+			.on("drag", dragging)
+			.on("end", dragend));
+
+	node.append("title")
+		.text(function(d) { return d.id });
 
 	node.append("text")
 	    .attr("dx", 12)
 	    .attr("font-size", 11)
 	    .attr("dy", ".35em")
-	    .text(function(d) {
-	        return d.id });
+	    .text(function(d) { return d.id; });
 
 	simulation.on("tick", function() {
 	    link.attr("x1", function(d) { return d.source.x; })
@@ -166,21 +164,22 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	        .attr("x2", function(d) { return d.target.x; })
 	        .attr("y2", function(d) { return d.target.y; });
 
-	    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	    node.select("circle").attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	    node.select("text").attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 	});
 
-	function dragstarted(d) {
+	function dragstart(d) {
 	    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
 	    d.fx = d.x;
 	    d.fy = d.y;
 	}
 
-	function dragged(d) {
+	function dragging(d) {
 	    d.fx = d3.event.x;
 	    d.fy = d3.event.y;
 	}
 
-	function dragended(d) {
+	function dragend(d) {
 	    if (!d3.event.active) simulation.alphaTarget(0);
 	    d.fx = null;
 	    d.fy = null;
