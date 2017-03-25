@@ -1,4 +1,4 @@
-var drawLegend = function(svg, data, color) {
+var drawLegend = function(svg, data, color, shape) {
 	var radius = 10,
 	    fontSize = 12;
 
@@ -16,11 +16,20 @@ var drawLegend = function(svg, data, color) {
 	        .attr("y", radius * 1.5)
 	        .text(function(d) { return d; });
 
-	legend.append("circle")
-	        .attr("cx", radius)
-	        .attr("cy", radius)
-	        .attr("r", radius)
-	        .attr("fill", color);
+	if ( shape == "circle" ) {
+		legend.append(shape)
+		        .attr("cx", radius)
+		        .attr("cy", radius)
+		        .attr("r", radius)
+		        .attr("fill", color);
+	} else if ( shape == "rect" ) {
+		legend.append(shape)
+				.attr("x", radius)
+				.attr("y", radius)
+				.attr("width", radius)
+				.attr("height", radius)
+				.attr("fill", color);
+	}
 }
 
 var drawMap = function(mapData, data, key, htmlID) {
@@ -186,18 +195,91 @@ var forceSimulation = function(teammateData, mensData, htmlID) {
 	}
 
 	/* legend */
-	drawLegend(svg, nationalities, color);
+	drawLegend(svg, nationalities, color, "circle");
+}
+
+var barChart = function(mensData) {
+
+    /* prepare data */
+    /* trim each value to ensure result accuracy */
+    _.each(mensData, o => _.each(o, (v, k) => o[k] = v.trim()));
+	leagues 	= _.map(_.countBy(mensData, "League"), function(value, key) { return { key: key, value: value }; });
+	positions 	= _.map(_.countBy(mensData, "Position"), function(value, key) { return { key: key, value: value }; });
+	/* order data */
+	leagues 	= _.orderBy(leagues, ['value'], ['desc']);
+	positions 	= _.orderBy(positions, ['value'], ['desc']);
+
+    var margin = {top: 40, right: 40, bottom: 40, left: 40},
+        width = 600 - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom,
+        radius = Math.min(width, height) / 2;
+
+	var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    /* scale x and y */
+    var x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+        y = d3.scaleLinear().range([height, 0]);
+
+    /* draw svg and g elements */
+    var svg = d3.select("#extra")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                	.attr("transform", "translate(" + margin.left * 1.5 + "," + margin.left / 1.5 + ")");
+
+    drawBarChart(svg, leagues, height, x, y);
+
+}
+
+var drawBarChart = function(svg, data, height, x, y) {
+
+	/* domain data for x and y */
+	x.domain(data.map(function(d) { return d.key; }));
+	y.domain([0, d3.max(data, function(d) { return d.value * 1.2; })]);
+
+	/* define x and y axes rules */
+	var xAxis = d3.axisBottom(x);
+	var yAxis = d3.axisLeft(y);
+
+	/* draw bar chart */
+	svg.selectAll("rect")
+	        .data(data)
+	        .enter().append("rect")
+	        .attr("x", function(d) { return x(d.key); })
+	        .attr("y", function(d) { return y(d.value); })
+	        .attr("width", x.bandwidth())
+	        .attr("height", function(d) { return height - y(d["value"]); })
+	        .attr("fill", "#EB4838")
+	        	.append("text")
+	        	.text(function(d) { return d.value; });
+
+	/* append x axis, transform it to bottom */
+	svg.append("g")
+	        .attr("transform", "translate(0," + height + ")")
+	        .call(xAxis)
+
+	/* append y axis */
+	svg.append("g")
+	        .call(yAxis);
+
 }
 
 function createVis(errors, mapData, womensData, mensData, teammateData) {
 
     if (errors) throw errors;
 
+    /* Part 1 */
     drawMap(mapData, womensData, "Country", "#map-women");
 
+    /* Part 2 */
     drawMap(mapData, mensData, "Nationality", "#map-men");
 
+    /* Part 3 */
     forceSimulation(teammateData, mensData, "#teammates");
+
+    /* Extra credit */
+    barChart(mensData);
 
 }
 
