@@ -230,6 +230,14 @@ var barChart = function(mensData) {
 
     drawBarChart(svg, leagues, height, x, y);
 
+    d3.select("select").on("change", function() {
+    	svg.selectAll("g").remove();
+    	if (this.value == "League") {
+    		drawBarChart(svg, leagues, height, x, y);
+    	} else if (this.value == "Position"){
+    		drawBarChart(svg, positions, height, x, y);
+    	}
+    });
 }
 
 var drawBarChart = function(svg, data, height, x, y) {
@@ -243,26 +251,48 @@ var drawBarChart = function(svg, data, height, x, y) {
 	var yAxis = d3.axisLeft(y);
 
 	/* draw bar chart */
-	svg.selectAll("rect")
-	        .data(data)
-	        .enter().append("rect")
-	        .attr("x", function(d) { return x(d.key); })
-	        .attr("y", function(d) { return y(d.value); })
-	        .attr("width", x.bandwidth())
-	        .attr("height", function(d) { return height - y(d["value"]); })
-	        .attr("fill", "#EB4838")
-	        	.append("text")
-	        	.text(function(d) { return d.value; });
+	var g = svg.selectAll("g")
+		        .data(data)
+		        .enter().append("g")
+		        .attr("class", "bar");
 
-	/* append x axis, transform it to bottom */
-	svg.append("g")
-	        .attr("transform", "translate(0," + height + ")")
-	        .call(xAxis)
+	g.append("rect")
+		.attr("x", function(d) { return x(d.key); })
+		.attr("y", function(d) { return y(d.value); })
+		.attr("width", x.bandwidth())
+		.attr("height", function(d) { return height - y(d["value"]); })
+		.attr("fill", "#EB4838");
+
+	g.append("text")
+		.attr("x", function(d) {
+			return x(d.key) + (x.bandwidth() / 2);
+		})
+		.attr("y", function(d) { return y(d.value) - 10; })
+		.text(function(d) { return d.value; })
+		.attr("text-anchor", "middle");
+
+	/* append x axis */
+	if (svg.select(".x.axis") == undefined) {
+		svg.select(".x.axis")
+		    .call(xAxis);
+	} else {
+		svg.select(".x.axis").remove();
+		svg.append("g")
+				.attr("class", "x axis")
+		        .attr("transform", "translate(0," + height + ")")
+		        .call(xAxis);
+	}
 
 	/* append y axis */
-	svg.append("g")
-	        .call(yAxis);
-
+	if (svg.select(".y.axis") == undefined) {
+		svg.select(".y.axis")
+		    .call(yAxis);
+	} else {
+		svg.select(".y.axis").remove();
+		svg.append("g")
+				.attr("class", "y axis")
+		        .call(yAxis);
+	}
 }
 
 function createVis(errors, mapData, womensData, mensData, teammateData) {
@@ -288,5 +318,4 @@ d3.queue().defer(d3.json, "https://cdn.rawgit.com/johan/world.geo.json/master/co
     .defer(d3.json, "https://cdn.rawgit.com/dakoop/e4fa063e3f3415f3d3c79456bc4b6dc5/raw/a9e01691802c8e70d94ce33a59e98529cc4324af/guardian-16-men.json")
     .defer(d3.json, "https://cdn.rawgit.com/dakoop/e4fa063e3f3415f3d3c79456bc4b6dc5/raw/a9e01691802c8e70d94ce33a59e98529cc4324af/soccer-teammates-men.json")
     .await(createVis);
-
 
